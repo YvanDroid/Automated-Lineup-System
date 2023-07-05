@@ -125,8 +125,10 @@ def sort_menu():
             sg.Button("Main Menu"),
             sg.Button("Add Column to Sort"),
             sg.Button("Sort Columns"),
+            sg.Button("Clear Sorting List"),
         ],
         [sg.Text("Selected Columns:", key="-SELCOL-")],
+        [sg.Text("Sorted List:", key="-SORLIS-")],
     ]
 
     sort_window = sg.Window("Sort Menu", sortmenu, modal=True)
@@ -148,9 +150,17 @@ def sort_menu():
             print(sm_headers)
             sort_window["-SELCOL-"].update(f"Selected Columns: {set(sm_headers)}")
             for i in lineup_list.to_list():
-                sm_list.append(lineup_list.to_list())
+                sm_list.append(i)
             print(sm_list)
 
+        if event2 == "Sort Columns":
+            sort_window["-SORLIS-"].update(f"Sorted List:{SortList(sm_list)}")
+
+        if event2 == "Clear Sorting List":
+            sort_window["-SORLIS-"].update("Sorted List:")
+            sort_window["-SELCOL-"].update("Selected Columns:")
+            sm_headers = []
+            sm_list = []
     sort_window.close()
 
 
