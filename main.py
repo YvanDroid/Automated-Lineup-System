@@ -126,8 +126,11 @@ def sort_menu():
             sg.Button("Add Column to Sort"),
             sg.Button("Sort Columns"),
             sg.Button("Clear Sorting List"),
+            sg.Button("Add One-Off Column", key="-SORTEXTRA-"),
+            sg.Input(key="-SORTEXTRADATA-"),
         ],
         [sg.Text("Selected Columns:", key="-SELCOL-")],
+        [sg.Text("Unsorted List:", key="-UNSORLIS-")],
         [sg.Text("Sorted List:", key="-SORLIS-")],
     ]
 
@@ -152,6 +155,19 @@ def sort_menu():
             for i in lineup_list.to_list():
                 sm_list.append(i)
             print(sm_list)
+            sort_window["-UNSORLIS-"].update(f"Unsorted List: {sm_list}")
+
+        if event2 == "-SORTEXTRA-":
+            # Grab the data from the text box and make it into a list.
+            try:
+                extra_list = values2["-SORTEXTRADATA-"].split(",")
+                for i in extra_list:
+                    sm_list.append(int(i))
+                sort_window["-UNSORLIS-"].update(f"Unsorted List: {sm_list}")
+            except:
+                sg.popup_ok(
+                    "Please make sure that your list is populated and consists of integers."
+                )
 
         if event2 == "Sort Columns":
             sort_window["-SORLIS-"].update(f"Sorted List:{SortList(sm_list)}")
