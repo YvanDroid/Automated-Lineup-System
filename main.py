@@ -31,9 +31,6 @@ def TableReader(filename):
             header_list = ["column" + str(x) for x in range(len(data[0]))]
     except:
         sg.popup_error("Error Reading File")
-        # Return to main menu
-
-        # return
 
     table = [
         [
@@ -50,7 +47,7 @@ def TableReader(filename):
         ]
     ]
 
-    return table, filename, df, header_list
+    return table, df, header_list
 
 
 def SortColumns(dataframe, selection, extra_column):
@@ -107,6 +104,53 @@ layout = [
 window = sg.Window("Automated Lineup System", layout)
 
 
+def create_edit_menu(edit_status=0):  # Editing = 1, Creating = 0
+    # To do:
+    # Make layout
+    # Add event handling
+    # Find a way to sync the table and the dataframe
+
+    if edit_status == 1:
+        # Editing file
+        # Obtain file using GetFile()
+        # Put csv into dataframe
+        ce_title = "Edit Menu"
+        ce_filename = GetFile()
+        ce_table, ce_dF, ce_headers = TableReader(ce_filename)
+    else:
+        # Creating file
+        # No table yet, so don't try it
+        # Intialize an empty dataframe
+        ce_title = "Create Menu"
+        ce_headers = []
+        ce_dF = pd.DataFrame()
+        ce_dummy_data = ["This", "Will", "Change", "When", "First", "Column", "Added"]
+        ce_table = [
+            [
+                sg.Table(
+                    values=ce_dummy_data,
+                    headings=["column" + str(x) for x in range(len(ce_dummy_data))],
+                    display_row_numbers=True,
+                    auto_size_columns=False,
+                    num_rows=min(25, len(ce_dummy_data)),
+                    enable_events=True,
+                    enable_click_events=True,
+                    key="-TABLE-",
+                )
+            ]
+        ]
+
+    ce_menu = []  # Layout
+    ce_window = sg.Window(ce_title, ce_menu)
+
+    while True:
+        event, values = ce_window.read()
+        if event == "Main Menu" or event == sg.WIN_CLOSED:
+            break
+
+    ce_window.close()
+
+
 def change_layout(old_layout, new_layout):
     window[f"-COL{old_layout}-"].update(visible=False)
     window[f"-COL{new_layout}-"].update(visible=True)
@@ -114,13 +158,17 @@ def change_layout(old_layout, new_layout):
 
 
 def sort_menu():
-    sm_lineup, sm_filename, sm_df, sm_df_headers = TableReader(GetFile())
+    sm_filename = GetFile()
+    if sm_filename == None:
+        sg.popup("No file selected. Returning to menu")
+        return
+    sm_table, sm_df, sm_df_headers = TableReader(sm_filename)
     print(sm_df_headers)
     sm_list = []
     sm_headers = []
     sortmenu = [
-        [sg.Text(f"{sm_filename}")],
-        [sg.Column(sm_lineup, key="-SM1-")],
+        [sg.Text(f"Now reading: {sm_filename}")],
+        [sg.Column(sm_table, key="-SM1-")],
         [
             sg.Button("Main Menu"),
             sg.Button("Add Column to Sort"),
@@ -135,16 +183,18 @@ def sort_menu():
     ]
 
     sort_window = sg.Window("Sort Menu", sortmenu, modal=True)
-
+    sort_window.finalize()
     while True:
         event2, values2 = sort_window.read()
         print(event2, values2)
         if event2 == "Main Menu" or event2 == sg.WIN_CLOSED:
             break
         if "+CLICKED+" in event2:
+            # Find the selected column
             print(f"Row Selected: {event2[2][0]}")
             print(f"Column Selected: {event2[2][1]}")
             selected_column = event2[2][1]
+            # Display the selected column in terminal
             lineup_list = sm_df.iloc[1:, selected_column]
             print(lineup_list.to_list())
 
@@ -174,13 +224,13 @@ def sort_menu():
 
         if event2 == "Clear Sorting List":
             sort_window["-SORLIS-"].update("Sorted List:")
+            sort_window["-UNSORLIS-"].update("Unsorted List:")
             sort_window["-SELCOL-"].update("Selected Columns:")
             sm_headers = []
             sm_list = []
     sort_window.close()
 
 
-layout = 1  # The currently visible layout
 while True:
     event, values = window.read()
     print(event, values)
@@ -188,8 +238,9 @@ while True:
         break
     elif event == "Sort":
         sort_menu()
-
-    elif event == "Main Menu":
-        layout = change_layout(layout, 1)
+    elif event == "Edit":
+        create_edit_menu(1)
+    elif event == "Create":
+        create_edit_menu(0)
 
 window.close()
