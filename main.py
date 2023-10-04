@@ -109,8 +109,6 @@ def AddColumn(dataframe, header="", content=""):
     dataframe = pd.concat([dataframe, new_column], axis=1)
     dataframe1 = dataframe.replace(np.nan, 0)
     dataframe2 = dataframe1.astype(int, copy=True, errors="raise")
-
-    print(dataframe2)
     # Print the updated dataframe
     return dataframe2
 
@@ -186,54 +184,6 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
         ce_dF = dataframe
         ce_table, ce_headers = CreateTable(ce_dF, ce_rc_menu)
 
-    print(ce_dF)
-    # To do:
-    # Make layout
-    # Add event handling
-    # Find a way to sync the table and the dataframe
-    # if edit_status == 1:
-    #     print("Editing")
-    #     # Editing file
-    #     # Obtain file using GetFile()
-    #     # Put csv into dataframe
-    #     ce_title = "Edit Menu"
-    # elif edit_status == 0:
-    #     print("Creating")
-    #     # Creating file
-    #     # No table yet, so don't try it
-    #     # Intialize an empty dataframe
-    #     ce_title = "Create Menu"
-    #     ce_headers = []
-    #     ce_dF = pd.DataFrame()
-    #     ce_dummy_data = [
-    #         ["This"],
-    #         ["Will"],
-    #         ["Change"],
-    #         ["When"],
-    #         ["First"],
-    #         ["Column"],
-    #         ["Added"],
-    #     ]
-    #     ce_table = [
-    #         [
-    #             sg.Table(
-    #                 values=ce_dummy_data,
-    #                 headings=["column" + str(x) for x in range(len(ce_dummy_data))],
-    #                 display_row_numbers=True,
-    #                 auto_size_columns=False,
-    #                 num_rows=min(25, len(ce_dummy_data)),
-    #                 enable_events=True,
-    #                 enable_click_events=True,
-    #                 key="-TABLE-",
-    #                 right_click_selects=True,
-    #                 right_click_menu=ce_rc_menu,
-    #             )
-    #         ]
-    #     ]
-    # else:
-    #     sg.Popup("Something went wrong. Returning to menu")
-    #     return
-
     ce_form = [
         [sg.Text("Header")],
         [sg.Input("", key="-CEHEAD-"), sg.Button("Clear", key="-CEHEADCLR-")],
@@ -266,7 +216,6 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             ce_dF = AddColumn(
                 ce_dF, header=values3["-CEHEAD-"], content=values3["-CELIST-"]
             )
-            print(ce_dF)
             TableUpdate(ce_dF, ce_window)
 
         if event3 == "Delete Column" or event3 == "Delete Selected Column":
