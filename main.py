@@ -8,6 +8,63 @@ import datetime as dt
 dF = pd.DataFrame()
 
 
+def GetDays():  # Return days that match the next WS and then the next 2
+    today = dt.date.today()  # Return the weekday
+    # 0 = Monday, 6 = Sunday, 3 = Thursday
+    if today <= 3:  # Before or on a thursday
+        # Return the date for the thursday, the saturday and the next week's thursday
+        ws1 = today + dt.timedelta(
+            days=(3 - today.weekday())
+        )  # Shift into the thursday of this week
+        ws2 = today + dt.timedelta(
+            days=(6 - today.weekday())
+        )  # Shift into this week's sunday
+    if today > 3 and today <= 6:  # Between friday and sunday
+        ws1 = today + dt.timedelta(days=3 - today.weekday())
+        ws2 = today + dt.timedelta(days=(7 + (3 - today.weekday())))
+    ws3 = ws1 + dt.timedelta(days=7)
+
+    return [ws1, ws2, ws3]
+
+
+def FileFromDate(date):  # Must be a datetime value
+    # Standard naming convention from file is:
+    # Lineup-[Month]-[Year].csv
+    # Note, the locale is VERY important here, as changing locale will change this as well
+    return "Lineup-" + date.strftime("%B-%Y") + ".csv"
+
+
+def Month_Dataframe(
+    date,
+):  # Return the dataframe for the given month if it exists, while changing the headers
+    try:
+        file_df = pd.read_csv(FileFromDate(date), sep=",", engine="python")
+    except:
+        print("Something went wrong here")
+        return
+    headers = file_df.columns.tolist()
+    new_headers = [str(date)[:8] + i for i in headers]
+    file_df.columns = new_headers
+    return file_df
+
+
+def MainMenuDataframe():
+    days = GetDays()
+    prev_month = dt.date(1, 1, 1)
+    whole_df = pd.DataFrame()
+    mm_df = pd.DataFrame()
+    for i in days:
+        if prev_month.month == i.month:
+            # Don't add the dataframe but do add the corresponding header into the main menu dataframe
+            mm_df = pd.concat([mm_df, whole_df[str(i)]], axis=1)
+            continue
+        else:
+            prev_month = i
+            whole_df = pd.concat([whole_df, Month_Dataframe(i)], axis=1)
+            print(whole_df)
+            mm_df = pd.concat([mm_df, whole_df[str(i)]], axis=1)
+
+
 def GetFile():
     filename = sg.popup_get_file(
         "Select a lineup csv", no_window=True, file_types=(("CSV Files", "*.csv"),)
