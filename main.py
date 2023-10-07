@@ -10,8 +10,9 @@ dF = pd.DataFrame()
 
 def GetDays():  # Return days that match the next WS and then the next 2
     today = dt.date.today()  # Return the weekday
+
     # 0 = Monday, 6 = Sunday, 3 = Thursday
-    if today <= 3:  # Before or on a thursday
+    if today.weekday() <= 3:  # Before or on a thursday
         # Return the date for the thursday, the saturday and the next week's thursday
         ws1 = today + dt.timedelta(
             days=(3 - today.weekday())
@@ -19,8 +20,8 @@ def GetDays():  # Return days that match the next WS and then the next 2
         ws2 = today + dt.timedelta(
             days=(6 - today.weekday())
         )  # Shift into this week's sunday
-    if today > 3 and today <= 6:  # Between friday and sunday
-        ws1 = today + dt.timedelta(days=3 - today.weekday())
+    if today.weekday() > 3 and today.weekday() <= 6:  # Between friday and sunday
+        ws1 = today + dt.timedelta(days=6 - today.weekday())
         ws2 = today + dt.timedelta(days=(7 + (3 - today.weekday())))
     ws3 = ws1 + dt.timedelta(days=7)
 
@@ -43,26 +44,45 @@ def Month_Dataframe(
         print("Something went wrong here")
         return
     headers = file_df.columns.tolist()
-    new_headers = [str(date)[:8] + i for i in headers]
+    normalised_headers = []
+    for i in headers:
+        if len(i) < 2:
+            i = "0" + i
+            normalised_headers.append(i)
+        else:
+            normalised_headers.append(i)
+    new_headers = [str(date)[:8] + i for i in normalised_headers]
     file_df.columns = new_headers
     return file_df
 
 
 def MainMenuDataframe():
     days = GetDays()
+    print(days)
+    for i, day in enumerate(days):
+        print(day)
     prev_month = dt.date(1, 1, 1)
     whole_df = pd.DataFrame()
     mm_df = pd.DataFrame()
-    for i in days:
-        if prev_month.month == i.month:
+    for i, day in enumerate(days):
+        print(day)
+        if prev_month.month == day.month:
             # Don't add the dataframe but do add the corresponding header into the main menu dataframe
-            mm_df = pd.concat([mm_df, whole_df[str(i)]], axis=1)
+            try:
+                mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
+            except KeyError:
+                print(f"Value in table not found: {day[i]}")
+                continue
             continue
         else:
-            prev_month = i
-            whole_df = pd.concat([whole_df, Month_Dataframe(i)], axis=1)
-            print(whole_df)
-            mm_df = pd.concat([mm_df, whole_df[str(i)]], axis=1)
+            prev_month = day
+            whole_df = pd.concat([whole_df, Month_Dataframe(day)], axis=1)
+            try:
+                mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
+            except KeyError:
+                print(f"Value in table not found: {day}")
+                continue
+    return mm_df
 
 
 def GetFile():
@@ -182,8 +202,11 @@ def RemoveColumn(dataframe, header):
 
 def SortColumns(dataframe, selection, extra_column):
     extra_column_array = extra_column.split(",")
-    selection_array = selection.split(",")
     sorting_array = []
+    if type(selection) == str:
+        selection_array = selection.split(",")
+    if type(selection) == list:
+        selection_array = selection
 
     for column in selection_array:
         values = dataframe[column].tolist()
@@ -206,17 +229,23 @@ def SortList(list):
 
 
 # ----------- Create the 3 layouts this Window will display -----------
-mm_3lineups = [[]]  # TableReader(GetFile())
+mm_df = MainMenuDataframe()
+mm_table, mm_table_headers = CreateTable(mm_df, [])
 mm_date_buttons = [
     [sg.Text(dt.date.today())],
-    [sg.Button("Create")],
-    [sg.Button("Edit")],
-    [sg.Button("Sort")],
+    [sg.Button("Create", expand_x=True)],
+    [sg.Button("Edit", expand_x=True)],
+    [sg.Button("Sort", expand_x=True)],
+]
+mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers, "")
+mm_side = [
+    [sg.Text("Upcoming WS:")],
+    [sg.Column(mm_table)],
+    [sg.Text("Sort List: " + str(mm_pre_sort_list))],
+    [sg.Text("Sorted List: " + str(mm_sorted_list))],
 ]
 
-mainmenu = [
-    [sg.Column(mm_date_buttons, key="-MM1"), sg.Column(mm_3lineups, key="-MM2")]
-]
+mainmenu = [[sg.Column(mm_date_buttons, key="-MM1"), sg.Column(mm_side, key="-MM2")]]
 
 # ----------- Create actual layout using Columns and a row of Buttons
 layout = [
