@@ -8,7 +8,7 @@ import datetime as dt
 dF = pd.DataFrame()
 
 
-def GetDays():  # Return days that match the next WS and then the next 2
+def GetDays():  # Return days that match the next WS and then the next 2 and previous 1
     today = dt.date.today()  # Return the weekday
 
     # 0 = Monday, 6 = Sunday, 3 = Thursday
@@ -20,12 +20,14 @@ def GetDays():  # Return days that match the next WS and then the next 2
         ws2 = today + dt.timedelta(
             days=(6 - today.weekday())
         )  # Shift into this week's sunday
+        ws0 = ws2 - dt.timedelta(days=7)
     if today.weekday() > 3 and today.weekday() <= 6:  # Between friday and sunday
         ws1 = today + dt.timedelta(days=6 - today.weekday())
         ws2 = today + dt.timedelta(days=(7 + (3 - today.weekday())))
+        ws0 = ws2 - dt.timedelta(days=7)
     ws3 = ws1 + dt.timedelta(days=7)
 
-    return [ws1, ws2, ws3]
+    return [ws0, ws1, ws2, ws3]
 
 
 def FileFromDate(date):  # Must be a datetime value
@@ -58,14 +60,10 @@ def Month_Dataframe(
 
 def MainMenuDataframe():
     days = GetDays()
-    print(days)
-    for i, day in enumerate(days):
-        print(day)
     prev_month = dt.date(1, 1, 1)
     whole_df = pd.DataFrame()
     mm_df = pd.DataFrame()
     for i, day in enumerate(days):
-        print(day)
         if prev_month.month == day.month:
             # Don't add the dataframe but do add the corresponding header into the main menu dataframe
             try:
@@ -237,7 +235,7 @@ mm_date_buttons = [
     [sg.Button("Edit", expand_x=True)],
     [sg.Button("Sort", expand_x=True)],
 ]
-mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers, "")
+mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers[2:], "")
 mm_side = [
     [sg.Text("Upcoming WS:")],
     [sg.Column(mm_table)],
