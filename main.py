@@ -226,35 +226,6 @@ def SortList(list):
     return sorted([*set(list)])
 
 
-# ----------- Create the 3 layouts this Window will display -----------
-mm_df = MainMenuDataframe()
-mm_table, mm_table_headers = CreateTable(mm_df, [])
-mm_date_buttons = [
-    [sg.Text(dt.date.today())],
-    [sg.Button("Create", expand_x=True)],
-    [sg.Button("Edit", expand_x=True)],
-    [sg.Button("Sort", expand_x=True)],
-]
-mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers[2:], "")
-mm_side = [
-    [sg.Text("Upcoming WS:")],
-    [sg.Column(mm_table)],
-    [sg.Text("Sort List: " + str(mm_pre_sort_list))],
-    [sg.Text("Sorted List: " + str(mm_sorted_list))],
-]
-
-mainmenu = [[sg.Column(mm_date_buttons, key="-MM1"), sg.Column(mm_side, key="-MM2")]]
-
-# ----------- Create actual layout using Columns and a row of Buttons
-layout = [
-    [
-        sg.Column(mainmenu, key="-COL1-"),
-    ],
-]
-
-window = sg.Window("Automated Lineup System", layout)
-
-
 def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
     ce_rc_menu = [
         "&Right",
@@ -316,12 +287,6 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             )
 
     ce_window.close()
-
-
-def change_layout(old_layout, new_layout):
-    window[f"-COL{old_layout}-"].update(visible=False)
-    window[f"-COL{new_layout}-"].update(visible=True)
-    return new_layout
 
 
 def sort_menu():
@@ -403,17 +368,51 @@ def sort_menu():
     sort_window.close()
 
 
-while True:
-    event, values = window.read()
-    print(event, values)
-    if event in (sg.WIN_CLOSED, "Exit"):
-        break
-    elif event == "Sort":
-        sort_menu()
-    elif event == "Edit":
-        create_edit_menu("", 1)
-    elif event == "Create":
-        dF = pd.DataFrame()
-        create_edit_menu(dF, 0)
+def main_window():
+    # ----------- Create the 3 layouts this Window will display -----------
+    mm_df = MainMenuDataframe()
+    mm_table, mm_table_headers = CreateTable(mm_df, [])
+    mm_date_buttons = [
+        [sg.Text(dt.date.today())],
+        [sg.Button("Create", expand_x=True)],
+        [sg.Button("Edit", expand_x=True)],
+        [sg.Button("Sort", expand_x=True)],
+    ]
+    mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers[2:], "")
+    mm_side = [
+        [sg.Text("Upcoming WS:")],
+        [sg.Column(mm_table)],
+        [sg.Text("Sort List: " + str(mm_pre_sort_list))],
+        [sg.Text("Sorted List: " + str(mm_sorted_list))],
+    ]
 
-window.close()
+    mainmenu = [
+        [sg.Column(mm_date_buttons, key="-MM1"), sg.Column(mm_side, key="-MM2")]
+    ]
+
+    # ----------- Create actual layout using Columns and a row of Buttons
+    layout = [
+        [
+            sg.Column(mainmenu, key="-COL1-"),
+        ],
+    ]
+
+    window = sg.Window("Automated Lineup System", layout)
+
+    while True:
+        event, values = window.read()
+        print(event, values)
+        if event in (sg.WIN_CLOSED, "Exit"):
+            break
+        elif event == "Sort":
+            sort_menu()
+        elif event == "Edit":
+            create_edit_menu("", 1)
+        elif event == "Create":
+            dF = pd.DataFrame()
+            create_edit_menu(dF, 0)
+
+    window.close()
+
+
+main_window()
