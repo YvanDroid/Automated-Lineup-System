@@ -4,8 +4,41 @@ import os
 import sys
 import PySimpleGUI as sg
 import datetime as dt
+from colorama import Fore, Back, Style
+
+cprint = sg.cprint
 
 dF = pd.DataFrame()
+fore_color = [
+    Fore.RED,
+    Fore.GREEN,
+    Fore.YELLOW,
+    Fore.BLUE,
+    Fore.MAGENTA,
+    Fore.CYAN,
+    Fore.WHITE,
+    Fore.LIGHTRED_EX,
+    Fore.LIGHTGREEN_EX,
+    Fore.LIGHTYELLOW_EX,
+    Fore.LIGHTBLUE_EX,
+    Fore.LIGHTMAGENTA_EX,
+    Fore.LIGHTCYAN_EX,
+]
+back_color = [
+    Back.RED,
+    Back.GREEN,
+    Back.YELLOW,
+    Back.BLUE,
+    Back.MAGENTA,
+    Back.CYAN,
+    Back.WHITE,
+    Back.LIGHTRED_EX,
+    Back.LIGHTGREEN_EX,
+    Back.LIGHTYELLOW_EX,
+    Back.LIGHTBLUE_EX,
+    Back.LIGHTMAGENTA_EX,
+    Back.LIGHTCYAN_EX,
+]
 
 
 def GetDays():  # Return days that match the next WS and then the next 2 and previous 1
@@ -37,13 +70,50 @@ def FileFromDate(date):  # Must be a datetime value
     return "Lineup-" + date.strftime("%B-%Y") + ".csv"
 
 
+def ColorArray(sorting_array, selection_array):
+    # Obtain the separate lists to compare against
+    # Assumes that each column is equal length
+    split_array = np.array_split(sorting_array, len(selection_array))
+    # Can't sort the list later on so sort it now
+    # sorted_array = sorted([*set(sorting_array)])
+    sorted_array = sorted([*set(sorting_array)])
+    unsorted_array = sorting_array[:]
+
+    # Make copies that don't affect original
+    final_sorted_array = sorted_array[:]
+    final_unsorted_array = unsorted_array[:]
+    # Each lineup will have their own colour.
+    for color, column in enumerate(split_array):
+        # Each element in the sorted array
+        for count2, s_element in enumerate(sorted_array):
+            # Check the current split array column. This will choose the color
+            for count4, l in enumerate(
+                set(column.tolist()), start=0
+            ):  # Remove mismatched array length
+                if l == s_element:  # If it exists in the column array, color it
+                    final_sorted_array[count2] = (
+                        fore_color[color] + str(s_element) + Fore.RESET
+                    )
+        # Same for unsorted array.
+        for count3, us_element in enumerate(unsorted_array):
+            for count5, l2 in enumerate(column.tolist(), start=0):
+                if l2 == us_element:
+                    final_unsorted_array[count3] = (
+                        fore_color[color]
+                        + str(final_unsorted_array[count3])
+                        + Fore.RESET
+                    )
+
+    return final_unsorted_array, final_sorted_array
+
+
 def Month_Dataframe(
     date,
 ):  # Return the dataframe for the given month if it exists, while changing the headers
     try:
         file_df = pd.read_csv(FileFromDate(date), sep=",", engine="python")
     except:
-        print("Something went wrong here")
+        print(f"{FileFromDate(date)} not found")
         return
     headers = file_df.columns.tolist()
     normalised_headers = []
@@ -69,7 +139,7 @@ def MainMenuDataframe():
             try:
                 mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
             except KeyError:
-                print(f"Value in table not found: {day[i]}")
+                print(f"Value in table not found: {i}")
                 continue
             continue
         else:
@@ -217,6 +287,10 @@ def SortColumns(dataframe, selection, extra_column):
             sorting_array.append(int(i))
 
     sorted_array = SortList(sorting_array)
+    c_unsorted, c_sorted = ColorArray(sorting_array, selection_array)
+    formatted_unsorted_array = ", ".join(str(item) for item in c_unsorted)
+    formatted_sorted_array = ", ".join(str(item) for item in c_sorted)
+    print(formatted_unsorted_array + "\n" + formatted_sorted_array)
 
     return sorting_array, sorted_array
 
@@ -358,6 +432,9 @@ def sort_menu():
 
         if event2 == "Sort Columns":
             sort_window["-SORLIS-"].update(f"Sorted List:{SortList(sm_list)}")
+            unsorted_array, sorted_array = ColorArray(sm_list, sm_headers)
+            print(", ".join(str(item) for item in unsorted_array))
+            print(", ".join(str(item) for item in sorted_array))
 
         if event2 == "Clear Sorting List":
             sort_window["-SORLIS-"].update("Sorted List:")
@@ -369,6 +446,8 @@ def sort_menu():
 
 
 def main_window():
+    MLINE_KEY = "-ML-" + sg.WRITE_ONLY_KEY  # Output only
+    MLINE_KEY2 = "-ML2-" + sg.WRITE_ONLY_KEY
     # ----------- Create the 3 layouts this Window will display -----------
     mm_df = MainMenuDataframe()
     mm_table, mm_table_headers = CreateTable(mm_df, [])
@@ -382,8 +461,22 @@ def main_window():
     mm_side = [
         [sg.Text("Upcoming WS:")],
         [sg.Column(mm_table)],
-        [sg.Text("Sort List: " + str(mm_pre_sort_list))],
-        [sg.Text("Sorted List: " + str(mm_sorted_list))],
+        [
+            sg.Multiline(
+                "Sort List: \n" + str(mm_pre_sort_list),
+                key=MLINE_KEY,
+                size=(80, 5),
+                auto_refresh=True,  # + str(mm_pre_sort_list),
+            )
+        ],
+        [
+            sg.Multiline(
+                "Sorted List: \n" + str(mm_sorted_list),
+                key=MLINE_KEY2,
+                size=(80, 5),
+                auto_refresh=True,
+            )
+        ],
     ]
 
     mainmenu = [
@@ -398,7 +491,6 @@ def main_window():
     ]
 
     window = sg.Window("Automated Lineup System", layout)
-
     while True:
         event, values = window.read()
         print(event, values)
