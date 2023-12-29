@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-import os
-import sys
 import PySimpleGUI as sg
 import datetime as dt
-from colorama import Fore, Back, Style
+from colorama import Fore, Back
 
 cprint = sg.cprint
 
@@ -73,7 +71,11 @@ def FileFromDate(date):  # Must be a datetime value
 def ColorArray(sorting_array, selection_array):
     # Obtain the separate lists to compare against
     # Assumes that each column is equal length
-    split_array = np.array_split(sorting_array, len(selection_array))
+    try:
+        split_array = np.array_split(sorting_array, len(selection_array))
+    except ValueError:
+        print("No values to color")
+        return [0], [0]
     # Can't sort the list later on so sort it now
     # sorted_array = sorted([*set(sorting_array)])
     sorted_array = sorted([*set(sorting_array)])
@@ -215,20 +217,13 @@ def TableReader(filename, rc_menu):
     return table, df, headers
 
 
-def TableUpdate(dataframe, window):
+def TableUpdate(dataframe, window, window_function, **args):
     # Recreate the window for the table
+    # recreate a window by passing the window function
     # Close the old window
-    # window_table is the window['index'] of the table.
-    # Returns a values and headings of the listed dataframe.
-    # data = dataframe.values.tolist()
-    # headers = dataframe.columns.tolist()
 
     window.close()
-    create_edit_menu(dataframe, mode=0)
-    # window_table.update(values=data, headings=headers)
-    # table.configure(columns=(i for i in headers))
-    # for i in headers:
-    #     table.heading(i, text=headers[i])
+    window_function(dataframe, **args)
 
 
 def AddColumn(dataframe, header="", content=""):
@@ -295,9 +290,27 @@ def SortColumns(dataframe, selection, extra_column):
     return sorting_array, sorted_array
 
 
-def SortList(list):
+def ReplaceColumn(dataframe, selection, data="", new_header=""):
+    # Chooses the given column and replaces with the data given
+    # Can replace the header if needed
+    # Selection is integer so it should be
+    # If new_header is empty, just replace the data, keep the column name.
+    content_list = list(map(int, (data.split(","))))
+    if new_header == "":
+        print("New header is old header")
+        new_header = selection
+    new_data = pd.DataFrame({new_header: content_list})
+    print(new_data)
+    dataframe[selection] = new_data[new_header].values
+    # dataframe2 = dataframe.assign(new_header=new_data[new_header])
+    dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
+    print(dataframe)
+    return dataframe
+
+
+def SortList(array):
     # Sorts and returns a sorted array that removes duplicate entries
-    return sorted([*set(list)])
+    return sorted([*set(array)])
 
 
 def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
@@ -345,20 +358,49 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             ce_dF = AddColumn(
                 ce_dF, header=values3["-CEHEAD-"], content=values3["-CELIST-"]
             )
-            TableUpdate(ce_dF, ce_window)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Delete Column" or event3 == "Delete Selected Column":
             print(ce_headers[selected_column])
             ce_dF = RemoveColumn(ce_dF, str(ce_headers[selected_column]))
-            TableUpdate(ce_dF, ce_window)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Save to File":
             CreateFile(
                 ce_dF,
                 file_name=sg.popup_get_text(
-                    "Please enter the name to save", title="Save file name"
+                    "Please enter the name to save",
+                    title="Save file name",
+                    default_text="Lineup-",
                 ),
             )
+        if event3 == "Select Column to Replace":
+            values = ce_dF[ce_headers[selected_column]].tolist()
+            print(values)
+            value_list_str = ""
+            for index, element in enumerate(values):
+                if index == len(values) - 1:
+                    value_list_str += str(element)
+                else:
+                    value_list_str += str(element) + ","
+            ce_window["-CELIST-"].update(value_list_str)
+            ce_window["-CEHEAD-"].update(ce_headers[selected_column])
+            # Grab the selected column's data and place it into the headers
+            # Probably grab the last header selected to replace too
+
+        if event3 == "Replace Selected Column":
+            # Get data from text box and place into the header specified
+            # Refresh window#
+            print(
+                f"Replacing: {ce_headers[selected_column]} with {values3['-CEHEAD-']}"
+            )
+            ReplaceColumn(
+                ce_dF,
+                str(ce_headers[selected_column]),
+                values3["-CELIST-"],
+                values3["-CEHEAD-"],
+            )
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
     ce_window.close()
 
@@ -445,11 +487,11 @@ def sort_menu():
     sort_window.close()
 
 
-def main_window():
+def main_window(dataframe):
     MLINE_KEY = "-ML-" + sg.WRITE_ONLY_KEY  # Output only
     MLINE_KEY2 = "-ML2-" + sg.WRITE_ONLY_KEY
     # ----------- Create the 3 layouts this Window will display -----------
-    mm_df = MainMenuDataframe()
+    mm_df = dataframe
     mm_table, mm_table_headers = CreateTable(mm_df, [])
     mm_date_buttons = [
         [sg.Text(dt.date.today())],
@@ -459,7 +501,7 @@ def main_window():
     ]
     mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers[2:], "")
     mm_side = [
-        [sg.Text("Upcoming WS:")],
+        [sg.Text("Upcoming WS:"), sg.Button("Refresh Table")],
         [sg.Column(mm_table)],
         [
             sg.Multiline(
@@ -503,8 +545,14 @@ def main_window():
         elif event == "Create":
             dF = pd.DataFrame()
             create_edit_menu(dF, 0)
+        elif event == "Refresh Table":
+            mm_df = (
+                MainMenuDataframe()
+            )  # Hopefully, you do this during the same day as before lol
+            TableUpdate(mm_df, window, main_window)
 
     window.close()
 
 
-main_window()
+mm_df = MainMenuDataframe()
+main_window(mm_df)
