@@ -1,8 +1,10 @@
-import pandas as pd
-import numpy as np
-import PySimpleGUI as sg
 import datetime as dt
-from colorama import Fore, Back
+
+import numpy as np
+import pandas as pd
+import PySimpleGUI as sg
+from colorama import Back, Fore
+import re
 
 cprint = sg.cprint
 
@@ -37,6 +39,112 @@ back_color = [
     Back.LIGHTMAGENTA_EX,
     Back.LIGHTCYAN_EX,
 ]
+
+
+def cut_ansi_string_into_parts(string_with_ansi_codes):
+    """
+    Converts a string with ambedded ANSI Color Codes and parses it to create
+    a list of tuples describing pieces of the input string.
+    :param string_with_ansi_codes:
+    :return: [(sty, str, str, str), ...] A list of tuples. Each tuple has format: (text, text color, background color, effects)
+    """
+    color_codes_english = [
+        "Black",
+        "Red",
+        "Green",
+        "Yellow",
+        "Blue",
+        "Magenta",
+        "Cyan",
+        "White",
+        "Reset",
+    ]
+    color_codes = ["30m", "31m", "32m", "33m", "34m", "35m", "36m", "37m", "0m"]
+    effect_codes_english = [
+        "Italic",
+        "Underline",
+        "Slow Blink",
+        "Rapid Blink",
+        "Crossed Out",
+    ]
+    effect_codes = ["3m", "4m", "5m", "6m", "9m"]
+    background_codes = ["40m", "41m", "42m", "43m", "44m", "45m", "46m", "47m"]
+    background_codes_english = [
+        "Black",
+        "Red",
+        "Green",
+        "Yellow",
+        "Blue",
+        "Magenta",
+        "Cyan",
+        "White",
+    ]
+
+    ansi_codes = color_codes + effect_codes
+
+    tuple_list = []
+
+    string_list = string_with_ansi_codes.split("\u001b[")
+
+    if (len(string_list)) == 1:
+        string_list = string_with_ansi_codes.split("\033[")
+
+    for teststring in string_list:
+        if teststring == string_with_ansi_codes:
+            tuple_list += [(teststring, None, None, None)]
+            break
+        if any(code in teststring for code in ansi_codes):
+            static_string = None
+            color_used = None
+            effect_used = None
+            background_used = None
+            for color in range(0, len(color_codes)):
+                if teststring.startswith(color_codes[color]):
+                    working_thread = teststring.split(color_codes[color])
+                    ansi_strip = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+                    static_string = ansi_strip.sub("", working_thread[1])
+                    color_used = color_codes_english[color]
+            for effect in range(0, len(effect_codes)):
+                if teststring.startswith(effect_codes[effect]):
+                    working_thread = teststring.split(effect_codes[effect])
+                    ansi_strip = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+                    static_string = ansi_strip.sub("", working_thread[1])
+                    effect_used = effect_codes_english[effect]
+            for background in range(0, len(background_codes)):
+                if teststring.startswith(background_codes[background]):
+                    working_thread = teststring.split(background_codes[background])
+                    ansi_strip = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+                    static_string = ansi_strip.sub("", working_thread[1])
+                    background_used = background_codes_english[background]
+            try:
+                if not tuple_list[len(tuple_list) - 1][0]:
+                    if not tuple_list[len(tuple_list) - 1][1] == None:
+                        color_used = tuple_list[len(tuple_list) - 1][1]
+                    if not tuple_list[len(tuple_list) - 1][2] == None:
+                        background_used = tuple_list[len(tuple_list) - 1][2]
+                    if not tuple_list[len(tuple_list) - 1][3] == None:
+                        effect_used = tuple_list[len(tuple_list) - 1][3]
+                    tuple_list += [
+                        (static_string, color_used, background_used, effect_used)
+                    ]
+                else:
+                    tuple_list += [
+                        (static_string, color_used, background_used, effect_used)
+                    ]
+            except Exception:
+                tuple_list += [
+                    (static_string, color_used, background_used, effect_used)
+                ]
+
+    new_tuple_list = []
+
+    for x in range(0, len(tuple_list)):
+        if tuple_list[x][0]:
+            new_tuple_list += [
+                [tuple_list[x][0], tuple_list[x][1], tuple_list[x][2], tuple_list[x][3]]
+            ]
+
+    return new_tuple_list
 
 
 def GetDays():  # Return days that match the next WS and then the next 2 and previous 1
@@ -132,7 +240,8 @@ def Month_Dataframe(
 
 def MainMenuDataframe():
     days = GetDays()
-    prev_month = dt.date(1, 1, 1)
+    print(days)
+    prev_month = dt.date.today().replace(day=1) - dt.timedelta(days=1)
     whole_df = pd.DataFrame()
     mm_df = pd.DataFrame()
     for i, day in enumerate(days):
@@ -263,6 +372,15 @@ def RemoveColumn(dataframe, header):
     # dataframe.drop(header,axis=1)
 
 
+def array_to_string(sorting_array, selection_array):
+    c_unsorted, c_sorted = ColorArray(sorting_array, selection_array)
+    formatted_unsorted_array = ", ".join(str(item) for item in c_unsorted)
+    formatted_sorted_array = ", ".join(str(item) for item in c_sorted)
+    # print(formatted_unsorted_array + "\n" + formatted_sorted_array)
+
+    return formatted_sorted_array, formatted_unsorted_array
+
+
 def SortColumns(dataframe, selection, extra_column):
     extra_column_array = extra_column.split(",")
     sorting_array = []
@@ -282,12 +400,8 @@ def SortColumns(dataframe, selection, extra_column):
             sorting_array.append(int(i))
 
     sorted_array = SortList(sorting_array)
-    c_unsorted, c_sorted = ColorArray(sorting_array, selection_array)
-    formatted_unsorted_array = ", ".join(str(item) for item in c_unsorted)
-    formatted_sorted_array = ", ".join(str(item) for item in c_sorted)
-    print(formatted_unsorted_array + "\n" + formatted_sorted_array)
 
-    return sorting_array, sorted_array
+    return sorting_array, sorted_array, selection_array
 
 
 def ReplaceColumn(dataframe, selection, data="", new_header=""):
@@ -406,6 +520,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
 
 
 def sort_menu():
+    extra_list = ""
     selected_column = 0  # Default for if the user has not selected a column yet
     sm_filename = GetFile()
     sm_rc_menu = [
@@ -427,7 +542,7 @@ def sort_menu():
             sg.Button("Add Column to Sort"),
             sg.Button("Sort Columns"),
             sg.Button("Clear Sorting List"),
-            sg.Button("Add One-Off Column", key="-SORTEXTRA-"),
+            sg.Button("Add One-Off Column", key="-SORTEXTRA-", bind_return_key=True),
             sg.Input(key="-SORTEXTRADATA-"),
         ],
         [sg.Text("Selected Columns:", key="-SELCOL-")],
@@ -462,21 +577,28 @@ def sort_menu():
 
         if event2 == "-SORTEXTRA-":
             # Grab the data from the text box and make it into a list.
-            try:
-                extra_list = values2["-SORTEXTRADATA-"].split(",")
-                for i in extra_list:
-                    sm_list.append(int(i))
-                sort_window["-UNSORLIS-"].update(f"Unsorted List: {sm_list}")
-            except:
-                sg.popup_ok(
-                    "Please make sure that your list is populated and consists of integers."
-                )
+            # try:
+            #     extra_list = values2["-SORTEXTRADATA-"].split(",")
+            #     for i in extra_list:
+            #         sm_list.append(int(i))
+            #     sort_window["-UNSORLIS-"].update(f"Unsorted List: {sm_list}")
+            # except:
+            #     sg.popup_ok(
+            #         "Please make sure that your list is populated and consists of integers."
+            #     )
+            extra_list = values2["-SORTEXTRADATA-"]
+            for i in extra_list.split():
+                sm_list.append(int(i))
+            sort_window["-UNSORLIS-"].update(f"Unsorted List: {sm_list} {extra_list}")
 
         if event2 == "Sort Columns":
             sort_window["-SORLIS-"].update(f"Sorted List:{SortList(sm_list)}")
-            unsorted_array, sorted_array = ColorArray(sm_list, sm_headers)
-            print(", ".join(str(item) for item in unsorted_array))
-            print(", ".join(str(item) for item in sorted_array))
+            sorting_array, sorted_array, selection_array = SortColumns(
+                sm_df, sm_headers, extra_list
+            )
+            # unsorted_array, sorted_array = ColorArray(sm_list, sm_headers)
+            # print(", ".join(str(item) for item in unsorted_array))
+            # print(", ".join(str(item) for item in sorted_array))
 
         if event2 == "Clear Sorting List":
             sort_window["-SORLIS-"].update("Sorted List:")
@@ -499,22 +621,32 @@ def main_window(dataframe):
         [sg.Button("Edit", expand_x=True)],
         [sg.Button("Sort", expand_x=True)],
     ]
-    mm_pre_sort_list, mm_sorted_list = SortColumns(mm_df, mm_table_headers[2:], "")
+    mm_pre_sort_list, mm_sorted_list, mm_selections = SortColumns(
+        mm_df, mm_table_headers[2:], ""
+    )
+    fs_string, fu_string = array_to_string(mm_pre_sort_list, mm_selections)
+    fs_list, fu_list = cut_ansi_string_into_parts(
+        fs_string
+    ), cut_ansi_string_into_parts(fu_string)
+
+    # print(fs_list, fu_list)
     mm_side = [
         [sg.Text("Upcoming WS:"), sg.Button("Refresh Table")],
         [sg.Column(mm_table)],
         [
             sg.Multiline(
-                "Sort List: \n" + str(mm_pre_sort_list),
-                key=MLINE_KEY,
+                "Sort List: \n",  # + str(mm_pre_sort_list),
+                font="courier 10",
+                key="--MLINE_KEY--",
                 size=(80, 5),
                 auto_refresh=True,  # + str(mm_pre_sort_list),
             )
         ],
         [
             sg.Multiline(
-                "Sorted List: \n" + str(mm_sorted_list),
-                key=MLINE_KEY2,
+                "Sorted List: \n",  # + str(mm_sorted_list),
+                font="courier 10",
+                key="--MLINE_KEY2--",
                 size=(80, 5),
                 auto_refresh=True,
             )
@@ -532,7 +664,28 @@ def main_window(dataframe):
         ],
     ]
 
-    window = sg.Window("Automated Lineup System", layout)
+    window = sg.Window("Automated Lineup System", layout, finalize=True)
+    for item in fu_list:
+        if item[1] == "Reset":
+            item[1] = None
+        window["--MLINE_KEY--"].update(
+            item[0] + ", ",
+            text_color_for_value=item[1],
+            background_color_for_value=item[2],
+            append=True,
+            autoscroll=True,
+        )
+    for item in fs_list:
+        if item[1] == "Reset":
+            item[1] = None
+        window["--MLINE_KEY2--"].update(
+            item[0] + ", ",
+            text_color_for_value=item[1],
+            background_color_for_value=item[2],
+            append=True,
+            autoscroll=True,
+        )
+    window.refresh()
     while True:
         event, values = window.read()
         print(event, values)
