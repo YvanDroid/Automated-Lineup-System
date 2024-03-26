@@ -3,42 +3,12 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 import PySimpleGUI as sg
-from colorama import Back, Fore
+from table_reader import table_reader as tr
 import re
 
 cprint = sg.cprint
 
 dF = pd.DataFrame()
-fore_color = [
-    Fore.RED,
-    Fore.GREEN,
-    Fore.YELLOW,
-    Fore.BLUE,
-    Fore.MAGENTA,
-    Fore.CYAN,
-    Fore.WHITE,
-    Fore.LIGHTRED_EX,
-    Fore.LIGHTGREEN_EX,
-    Fore.LIGHTYELLOW_EX,
-    Fore.LIGHTBLUE_EX,
-    Fore.LIGHTMAGENTA_EX,
-    Fore.LIGHTCYAN_EX,
-]
-back_color = [
-    Back.RED,
-    Back.GREEN,
-    Back.YELLOW,
-    Back.BLUE,
-    Back.MAGENTA,
-    Back.CYAN,
-    Back.WHITE,
-    Back.LIGHTRED_EX,
-    Back.LIGHTGREEN_EX,
-    Back.LIGHTYELLOW_EX,
-    Back.LIGHTBLUE_EX,
-    Back.LIGHTMAGENTA_EX,
-    Back.LIGHTCYAN_EX,
-]
 
 
 def cut_ansi_string_into_parts(string_with_ansi_codes):
@@ -163,137 +133,11 @@ def multiline_update(window, key, asci_tuple_list):
     window.refresh()
 
 
-def GetDays():  # Return days that match the next WS and then the next 2 and previous 1
-    today = dt.date.today()  # Return the weekday
-
-    # 0 = Monday, 6 = Sunday, 3 = Thursday
-    if today.weekday() <= 3:  # Before or on a thursday
-        # Return the date for the thursday, the saturday and the next week's thursday
-        ws1 = today + dt.timedelta(
-            days=(3 - today.weekday())
-        )  # Shift into the thursday of this week
-        ws2 = today + dt.timedelta(
-            days=(6 - today.weekday())
-        )  # Shift into this week's sunday
-        ws0 = ws2 - dt.timedelta(days=7)
-    if today.weekday() > 3 and today.weekday() <= 6:  # Between friday and sunday
-        ws1 = today + dt.timedelta(days=6 - today.weekday())
-        ws2 = today + dt.timedelta(days=(7 + (3 - today.weekday())))
-        ws0 = ws2 - dt.timedelta(days=7)
-    ws3 = ws1 + dt.timedelta(days=7)
-
-    return [ws0, ws1, ws2, ws3]
-
-
-def FileFromDate(date):  # Must be a datetime value
-    # Standard naming convention from file is:
-    # Lineup-[Month]-[Year].csv
-    # Note, the locale is VERY important here, as changing locale will change this as well
-    return "Lineup-" + date.strftime("%B-%Y") + ".csv"
-
-
-def ColorArray(sorting_array, selection_array):
-    # Obtain the separate lists to compare against
-    # Assumes that each column is equal length
-    try:
-        split_array = np.array_split(sorting_array, len(selection_array))
-    except ValueError:
-        print("No values to color")
-        return [0], [0]
-    # Can't sort the list later on so sort it now
-    # sorted_array = sorted([*set(sorting_array)])
-    sorted_array = sorted([*set(sorting_array)])
-    unsorted_array = sorting_array[:]
-
-    # Make copies that don't affect original
-    final_sorted_array = sorted_array[:]
-    final_unsorted_array = unsorted_array[:]
-    # Each lineup will have their own colour.
-    for color, column in enumerate(split_array):
-        # Each element in the sorted array
-        for count2, s_element in enumerate(sorted_array):
-            # Check the current split array column. This will choose the color
-            for count4, l in enumerate(
-                set(column.tolist()), start=0
-            ):  # Remove mismatched array length
-                if l == s_element:  # If it exists in the column array, color it
-                    final_sorted_array[count2] = (
-                        fore_color[color] + str(s_element) + Fore.RESET
-                    )
-        # Same for unsorted array.
-        for count3, us_element in enumerate(unsorted_array):
-            for count5, l2 in enumerate(column.tolist(), start=0):
-                if l2 == us_element:
-                    final_unsorted_array[count3] = (
-                        fore_color[color]
-                        + str(final_unsorted_array[count3])
-                        + Fore.RESET
-                    )
-
-    return final_unsorted_array, final_sorted_array
-
-
-def Month_Dataframe(
-    date,
-):  # Return the dataframe for the given month if it exists, while changing the headers
-    try:
-        file_df = pd.read_csv(FileFromDate(date), sep=",", engine="python")
-    except:
-        print(f"{FileFromDate(date)} not found")
-        return
-    headers = file_df.columns.tolist()
-    normalised_headers = []
-    for i in headers:
-        if len(i) < 2:
-            i = "0" + i
-            normalised_headers.append(i)
-        else:
-            normalised_headers.append(i)
-    new_headers = [str(date)[:8] + i for i in normalised_headers]
-    file_df.columns = new_headers
-    return file_df
-
-
-def MainMenuDataframe():
-    days = GetDays()
-    print(days)
-    prev_month = dt.date.today().replace(day=1) - dt.timedelta(days=1)
-    whole_df = pd.DataFrame()
-    mm_df = pd.DataFrame()
-    for i, day in enumerate(days):
-        if prev_month.month == day.month:
-            # Don't add the dataframe but do add the corresponding header into the main menu dataframe
-            try:
-                mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
-            except KeyError:
-                print(f"Value in table not found: {i}")
-                continue
-            continue
-        else:
-            prev_month = day
-            whole_df = pd.concat([whole_df, Month_Dataframe(day)], axis=1)
-            try:
-                mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
-            except KeyError:
-                print(f"Value in table not found: {day}")
-                continue
-    return mm_df
-
-
 def GetFile():
     filename = sg.popup_get_file(
         "Select a lineup csv", no_window=True, file_types=(("CSV Files", "*.csv"),)
     )
     return None if filename == "" else filename
-
-
-def CreateFile(dataframe, file_name="newfile"):
-    file_extension = file_name[-4:]
-    if file_extension == ".csv":
-        pass
-    elif file_extension != ".csv":
-        file_name = file_name + ".csv"
-    dataframe.to_csv(file_name, encoding="utf-8-sig", index=False)
 
 
 def CreateTable(dataframe, rc_menu):
@@ -321,20 +165,9 @@ def CreateTable(dataframe, rc_menu):
 
 
 def TableReader(filename, rc_menu):
-    # data = []
-    # header_list = []
-    # button = sg.popup_yes_no("Does this file have column names already?")
     try:
         df = pd.read_csv(filename, sep=",", engine="python")
-        # data = df.values.tolist()
-        # # if button == "Yes":
-        # # Use first row as headers
-        # header_list = df.columns.tolist()  # df.iloc[0].tolist()
-        # # Drops the headers
-        # # data = df[1:].values.tolist()
-        # # elif button == "No":
-        # #     # Creates column names for each column
-        # #     header_list = ["column" + str(x) for x in range(len(data[0]))]
+
     except:
         sg.popup_error("Error Reading File")
 
@@ -349,99 +182,6 @@ def TableUpdate(dataframe, window, window_function, **args):
 
     window.close()
     window_function(dataframe, **args)
-
-
-def AddColumn(dataframe, header="", content=""):
-    # Adds a column to an existing or new csv file
-    # Input: List
-    # Maximum Length: However long the longest column is. Cannot be longer.
-
-    # Validate the header and content arguments
-    if not header or not content:
-        # print("Please provide a valid header and content for the column.")
-        sg.Popup("Please provide a valid header and content for the column")
-        return
-
-    # Convert the content string into a list of integers
-    try:
-        content_list = list(map(int, (content.split(","))))
-    except ValueError:
-        sg.Popup("Please input only numbers and commas for the content.")
-        return
-
-    # Add the new column to the dataframe using pd.concat
-    new_column = pd.DataFrame({header: content_list})
-    dataframe = pd.concat([dataframe, new_column], axis=1)
-    dataframe1 = dataframe.replace(np.nan, 0)
-    dataframe2 = dataframe1.astype(int, copy=True, errors="raise")
-    # Print the updated dataframe
-    return dataframe2
-
-
-def RemoveColumn(dataframe, header):
-    # Removes a selected column
-    # Input: Index
-    print(dataframe)
-    del dataframe[header]
-
-    return dataframe
-    # dataframe.drop(header,axis=1)
-
-
-def array_to_string(sorting_array, selection_array):
-    # Converts string into platform specific colours. Might not work on linux for displaying in Multiline elements
-    c_unsorted, c_sorted = ColorArray(sorting_array, selection_array)
-    formatted_unsorted_array = ", ".join(str(item) for item in c_unsorted)
-    formatted_sorted_array = ", ".join(str(item) for item in c_sorted)
-    # print(formatted_unsorted_array + "\n" + formatted_sorted_array) -- added for fallback in case it doesn't work
-
-    return formatted_sorted_array, formatted_unsorted_array
-
-
-def SortColumns(dataframe, selection, extra_column):
-    extra_column_array = extra_column.split(",")
-    sorting_array = []
-    if type(selection) == str:
-        selection_array = selection.split(",")
-    if type(selection) == list:
-        selection_array = selection
-
-    for column in selection_array:
-        values = dataframe[column].tolist()
-        for i in values:
-            sorting_array.append(i)
-
-    if extra_column != "":
-        selection_array.append(extra_column)
-        for i in extra_column_array:
-            sorting_array.append(int(i))
-
-    sorted_array = SortList(sorting_array)
-
-    return sorting_array, sorted_array, selection_array
-
-
-def ReplaceColumn(dataframe, selection, data="", new_header=""):
-    # Chooses the given column and replaces with the data given
-    # Can replace the header if needed
-    # Selection is integer so it should be
-    # If new_header is empty, just replace the data, keep the column name.
-    content_list = list(map(int, (data.split(","))))
-    if new_header == "":
-        print("New header is old header")
-        new_header = selection
-    new_data = pd.DataFrame({new_header: content_list})
-    print(new_data)
-    dataframe[selection] = new_data[new_header].values
-    # dataframe2 = dataframe.assign(new_header=new_data[new_header])
-    dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
-    print(dataframe)
-    return dataframe
-
-
-def SortList(array):
-    # Sorts and returns a sorted array that removes duplicate entries
-    return sorted([*set(array)])
 
 
 def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
@@ -486,18 +226,19 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             print(selected_column)
 
         if event3 == "Submit Column":
-            ce_dF = AddColumn(
+
+            ce_dF = tr.AddColumn(
                 ce_dF, header=values3["-CEHEAD-"], content=values3["-CELIST-"]
             )
             TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Delete Column" or event3 == "Delete Selected Column":
             print(ce_headers[selected_column])
-            ce_dF = RemoveColumn(ce_dF, str(ce_headers[selected_column]))
+            ce_dF = tr.RemoveColumn(ce_dF, str(ce_headers[selected_column]))
             TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Save to File":
-            CreateFile(
+            tr.CreateFile(
                 ce_dF,
                 file_name=sg.popup_get_text(
                     "Please enter the name to save",
@@ -525,7 +266,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             print(
                 f"Replacing: {ce_headers[selected_column]} with {values3['-CEHEAD-']}"
             )
-            ReplaceColumn(
+            tr.ReplaceColumn(
                 ce_dF,
                 str(ce_headers[selected_column]),
                 values3["-CELIST-"],
@@ -628,19 +369,22 @@ def sort_menu():
             #         "Please make sure that your list is populated and consists of integers."
             #     )
             extra_list = values2["-SORTEXTRADATA-"]
-            for i in extra_list.split():
+            for i in extra_list.split(","):
                 sm_list.append(int(i))
             sort_window["-UNSORLIS-"].update(
                 f"Unsorted List: \n {sm_list} {extra_list}"
             )
+
+            sm_df = tr.AddColumn(sm_df, extra_list, extra_list)
+
             # multiline_update(sort_window, "-UNSORLIS-", )
 
         if event2 == "Sort Columns":
-            sort_window["-SORLIS-"].update(f"Sorted List:{SortList(sm_list)}")
-            sorting_array, sorted_array, selection_array = SortColumns(
+            sort_window["-SORLIS-"].update(f"Sorted List:{tr.SortList(sm_list)}")
+            sorting_array, sorted_array, selection_array = tr.SortColumns(
                 sm_df, sm_headers, extra_list
             )
-            s_string, u_string = array_to_string(sorting_array, selection_array)
+            s_string, u_string = tr.array_to_string(sorting_array, selection_array)
             s_list, u_list = cut_ansi_string_into_parts(
                 s_string
             ), cut_ansi_string_into_parts(u_string)
@@ -670,10 +414,10 @@ def main_window(dataframe):
         [sg.Button("Edit", expand_x=True)],
         [sg.Button("Sort", expand_x=True)],
     ]
-    mm_pre_sort_list, mm_sorted_list, mm_selections = SortColumns(
+    mm_pre_sort_list, mm_sorted_list, mm_selections = tr.SortColumns(
         mm_df, mm_table_headers[2:], ""
     )
-    fs_string, fu_string = array_to_string(mm_pre_sort_list, mm_selections)
+    fs_string, fu_string = tr.array_to_string(mm_pre_sort_list, mm_selections)
     fs_list, fu_list = cut_ansi_string_into_parts(
         fs_string
     ), cut_ansi_string_into_parts(fu_string)
@@ -732,12 +476,12 @@ def main_window(dataframe):
             create_edit_menu(dF, 0)
         elif event == "Refresh Table":
             mm_df = (
-                MainMenuDataframe()
+                tr.MainMenuDataframe()
             )  # Hopefully, you do this during the same day as before lol
             TableUpdate(mm_df, window, main_window)
 
     window.close()
 
 
-mm_df = MainMenuDataframe()
+mm_df = tr.MainMenuDataframe()
 main_window(mm_df)
