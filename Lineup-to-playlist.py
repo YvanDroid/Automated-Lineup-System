@@ -27,7 +27,7 @@ hymn_paths = []
 
 
 def substring_index(path_list, substring):
-    search_string = rf"\b([E,T]?){substring}\b"
+    search_string = rf"\b([E,T]?)329\b(?!([\W\D](alto|bass|soprano|tenor|\(alto\)|\(tenor\)|\(bass\)|\(soprano\))))"
     for i, s in enumerate(path_list):
         if re.search(search_string, s) is not None:
             return i
