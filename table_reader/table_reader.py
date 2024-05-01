@@ -63,12 +63,14 @@ def MainMenuDataframe():
     days = GetDays()
     print(days)
     prev_month = dt.date.today().replace(day=1) - dt.timedelta(days=1)
-    print(prev_month)
+    # print(prev_month)
     whole_df = pd.DataFrame()
+    whole_df = pd.concat([whole_df, Month_Dataframe(prev_month)], axis=1)
     mm_df = pd.DataFrame()
     for i, day in enumerate(days):
         print(day)
         if prev_month.month == day.month:
+            print("In current month")
             # Don't add the dataframe but do add the corresponding header into the main menu dataframe
             try:
                 mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
@@ -77,8 +79,10 @@ def MainMenuDataframe():
                 continue
             continue
         else:
+            print("In new month")
             prev_month = day
             whole_df = pd.concat([whole_df, Month_Dataframe(day)], axis=1)
+            # print(whole_df)
             try:
                 mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
             except KeyError:

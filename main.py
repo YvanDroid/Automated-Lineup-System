@@ -415,7 +415,7 @@ def main_window(dataframe):
         [sg.Button("Sort", expand_x=True)],
     ]
     mm_pre_sort_list, mm_sorted_list, mm_selections = tr.SortColumns(
-        mm_df, mm_table_headers[2:], ""
+        mm_df, mm_table_headers[-2:], ""
     )
     fs_string, fu_string = tr.array_to_string(mm_pre_sort_list, mm_selections)
     fs_list, fu_list = cut_ansi_string_into_parts(
