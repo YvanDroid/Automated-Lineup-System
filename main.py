@@ -192,6 +192,9 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
     ce_title = "Table Editor"
     if mode == 1:  # No name given
         ce_filename = GetFile()
+        if ce_filename == (): # When cancelling out of dialogue menu, it returns an empty tuple.
+            sg.popup("No file selected. Returning to menu")
+            return
         ce_table, ce_dF, ce_headers = TableReader(ce_filename, ce_rc_menu)
     if mode == 0:
         ce_dF = dataframe
@@ -285,7 +288,8 @@ def sort_menu():
         "&Right",
         ["Add Column to Sort", "Sort Columns", "Clear Sorting List"],
     ]
-    if sm_filename == None:
+    print(sm_filename)
+    if sm_filename == (): # When cancelling out of dialogue menu, it returns an empty tuple.
         sg.popup("No file selected. Returning to menu")
         return
     sm_table, sm_df, sm_df_headers = TableReader(sm_filename, sm_rc_menu)
@@ -407,6 +411,8 @@ def main_window(dataframe):
     MLINE_KEY2 = "-ML2-" + sg.WRITE_ONLY_KEY
     # ----------- Create the 3 layouts this Window will display -----------
     mm_df = dataframe
+    mm_df = mm_df.replace(np.nan, 0)
+    mm_df = mm_df.astype(int, copy=True, errors="raise")
     mm_table, mm_table_headers = CreateTable(mm_df, [])
     mm_date_buttons = [
         [sg.Text(dt.date.today())],
