@@ -200,11 +200,14 @@ def ReplaceColumn(dataframe, selection, data="", new_header=""):
         print("New header is old header")
         new_header = selection
     new_data = pd.DataFrame({new_header: content_list})
-    print(new_data)
+    # print(new_data)
     dataframe[selection] = pd.Series(new_data[new_header].values)
     # dataframe2 = dataframe.assign(new_header=new_data[new_header])
     dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
-    dataframe = dataframe.replace(np.nan, 0)
+    try:
+        dataframe = dataframe.replace(np.nan, 0)
+    except: # When no nan values are present
+        pass
     print(dataframe)
     return dataframe
 

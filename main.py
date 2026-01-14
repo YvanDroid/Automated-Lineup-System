@@ -2,13 +2,16 @@ import datetime as dt
 
 import numpy as np
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from table_reader import table_reader as tr
 import re
 
-cprint = sg.cprint
+# cprint = sg.cprint
 
 dF = pd.DataFrame()
+
+sg.user_settings_filename('ALSSettings.json')
+
 
 
 def cut_ansi_string_into_parts(string_with_ansi_codes):
@@ -192,6 +195,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
     ce_title = "Table Editor"
     if mode == 1:  # No name given
         ce_filename = GetFile()
+        print(ce_filename)
         if ce_filename == (): # When cancelling out of dialogue menu, it returns an empty tuple.
             sg.popup("No file selected. Returning to menu")
             return
@@ -212,16 +216,31 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
         [sg.Column(ce_table, key="-CE1-"), sg.Column(ce_form, key="-CEFORM-")],
         [sg.Button("Main Menu"), sg.Button("Save to File"), sg.Button("Open New File")],
     ]  # Layout
-    ce_window = sg.Window(ce_title, ce_menu)
+    try: # Try grabbing the last known position of the window. If the file doesn't have it, just skip and do the default
+        window_pos = sg.user_settings_get_entry('-ce_location-')
+        print(window_pos)
+        if window_pos == [None, None]:
+            window_pos = [2496, 601]
+        ce_window = sg.Window(ce_title, ce_menu, location=window_pos)
+
+    except:
+        print("Key not found, using default")
+        ce_window = sg.Window(ce_title, ce_menu)
 
     ce_table = ce_window["-TABLE-"].Widget
     selected_column = 0
 
+    location = (0,0)
+
     while True:
         event3, values3 = ce_window.read()
+        if event3 != None:
+            location = ce_window.current_location()
+        print(location)
         print(f"event3's output: {event3}")
         print(f"values3's output: {values3}")
         if event3 == "Main Menu" or event3 == sg.WIN_CLOSED:
+            sg.user_settings_set_entry('-ce_location-',location)
             break
         if "+CLICKED+" in event3:
             selected_column = event3[2][1]
@@ -273,7 +292,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
                 ce_dF,
                 str(ce_headers[selected_column]),
                 values3["-CELIST-"],
-                values3["-CEHEAD-"],
+                #values3["-CEHEAD-"], // replace just the column name. Don't take the column value
             )
             TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
@@ -333,13 +352,21 @@ def sort_menu():
             )
         ],
     ]
-
-    sort_window = sg.Window("Sort Menu", sortmenu, modal=True)
+    try:
+        sort_window = sg.Window("Sort Menu", sortmenu, modal=True, location=sg.user_settings_get_entry('-sw_location-'))
+    except:
+        sort_window = sg.Window("Sort Menu", sortmenu, modal=True)
     sort_window.finalize()
+
+    location = (0,0)
+
     while True:
         event2, values2 = sort_window.read()
+        if event2 != None:
+            location = sort_window.current_location()
         print(event2, values2)
         if event2 == "Main Menu" or event2 == sg.WIN_CLOSED:
+            sg.user_settings_set_entry('-sw_location-',location)
             break
         if "+CLICKED+" in event2:
             # Find the selected column
@@ -376,7 +403,7 @@ def sort_menu():
             for i in extra_list.split(","):
                 sm_list.append(int(i))
             sort_window["-UNSORLIS-"].update(
-                f"Unsorted List: \n {sm_list} {extra_list}"
+                f"Unsorted List: \n {sm_list}"
             )
 
             sm_df = tr.AddColumn(sm_df, extra_list, extra_list)
@@ -455,22 +482,33 @@ def main_window(dataframe):
     mainmenu = [
         [sg.Column(mm_date_buttons, key="-MM1"), sg.Column(mm_side, key="-MM2")]
     ]
-
+    print(mainmenu)
     # ----------- Create actual layout using Columns and a row of Buttons
-    layout = [
-        [
-            sg.Column(mainmenu, key="-COL1-"),
-        ],
-    ]
-
-    window = sg.Window("Automated Lineup System", layout, finalize=True)
+    # layout = [
+    #     [
+    #         sg.Column(mainmenu, key="-COL1-"),
+    #     ],
+    # ]
+    try:
+        win_loc = sg.user_settings_get_entry('-mm_location-')
+        print(win_loc)
+        if win_loc == [None, None]:
+            win_loc = [2496, 601]
+        mm_window = sg.Window("Automated Lineup System", mainmenu, finalize=True, location=win_loc)
+    except:
+        mm_window = sg.Window("Automated Lineup System", mainmenu, finalize=True)
     # Put sorted list into multiline boxes
-    multiline_update(window, MLINE_KEY, fu_list)
-    multiline_update(window, MLINE_KEY2, fs_list)
+    multiline_update(mm_window, MLINE_KEY, fu_list)
+    multiline_update(mm_window, MLINE_KEY2, fs_list)
     # window.refresh()
+    location = (0,0)
     while True:
-        event, values = window.read()
+        event, values = mm_window.read()
+        if event != None:
+            location = mm_window.current_location()
         print(event, values)
+        if location != (None, None):
+            sg.user_settings_set_entry('-mm_location-',location)
         if event in (sg.WIN_CLOSED, "Exit"):
             break
         elif event == "Sort":
@@ -484,9 +522,9 @@ def main_window(dataframe):
             mm_df = (
                 tr.MainMenuDataframe()
             )  # Hopefully, you do this during the same day as before lol
-            TableUpdate(mm_df, window, main_window)
+            TableUpdate(mm_df, mm_window, main_window)
 
-    window.close()
+    mm_window.close()
 
 
 mm_df = tr.MainMenuDataframe()
