@@ -151,6 +151,7 @@ def AddColumn(dataframe, header="", content=""):
     dataframe = pd.concat([dataframe, new_column], axis=1)
     dataframe1 = dataframe.replace(np.nan, 0)
     dataframe2 = dataframe1.astype(int, copy=True, errors="raise")
+    print(dataframe2)
     # Print the updated dataframe
     return dataframe2
 
@@ -165,8 +166,8 @@ def RemoveColumn(dataframe, header):
     # dataframe.drop(header,axis=1)
 
 
-def SortColumns(dataframe, selection, extra_column):
-    extra_column_array = extra_column.split(",")
+def SortColumns(dataframe, selection):
+    # extra_column_array = extra_column.split(",")
     sorting_array = []
     if type(selection) == str:
         selection_array = selection.split(",")
@@ -177,17 +178,13 @@ def SortColumns(dataframe, selection, extra_column):
 
     for column in selection_array:
         values = dataframe[column].tolist()
-        for i in values:
-            sorting_array.append(i)
+        sorting_array.append(values)
 
-    if extra_column != "":
-        selection_array.append(extra_column)
-        for i in extra_column_array:
-            sorting_array.append(int(i))
+    # if extra_column != "":
+    #     selection_array.append(extra_column)
+    #     sorting_array.append([int(x) for x in extra_column_array])
 
-    sorted_array = SortList(sorting_array)
-
-    return sorting_array, sorted_array, selection_array
+    return sorting_array, selection_array
 
 
 def ReplaceColumn(dataframe, selection, data="", new_header=""):
@@ -196,14 +193,17 @@ def ReplaceColumn(dataframe, selection, data="", new_header=""):
     # Selection is integer so it should be
     # If new_header is empty, just replace the data, keep the column name.
     content_list = list(map(int, (data.split(","))))
+    max_len = max(len(dataframe), len(content_list))
+    if max_len > len(dataframe):
+        df  = df.reindex(range(max_len))
     if new_header == "":
         print("New header is old header")
         new_header = selection
-    new_data = pd.DataFrame({new_header: content_list})
+    new_data = content_list
     # print(new_data)
-    dataframe[selection] = pd.Series(new_data[new_header].values)
+    dataframe[selection] = pd.Series(new_data)
     # dataframe2 = dataframe.assign(new_header=new_data[new_header])
-    dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
+    # dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
     try:
         dataframe = dataframe.replace(np.nan, 0)
     except: # When no nan values are present
@@ -222,9 +222,10 @@ def array_to_string(sorting_array, selection_array):
     return formatted_sorted_array, formatted_unsorted_array
 
 
-def ColorArray(sorting_array, selection_array):
+def ColorArray2(sorting_array, selection_array):
     # Obtain the separate lists to compare against
     # Assumes that each column is equal length
+    print(sorting_array, selection_array)
     try:
         split_array = np.array_split(sorting_array, len(selection_array))
     except ValueError:
@@ -261,6 +262,42 @@ def ColorArray(sorting_array, selection_array):
                     )
 
     return final_unsorted_array, final_sorted_array
+
+def ColorArray(sorting_array, selection_array):
+    # Obtain the lists to sort, maybe switch over to just getting a list of arrays
+    # Zip the arrays together and then assign colours based on their array index
+    # Why not switch over to a pandas dataframe to send over?
+    zipped = []
+    color_index = 0
+    for i in sorting_array: # Each i should be a list
+        # dataframe_data = dataframe[i].tolist()
+        data = i
+        color_list = [fore_color[color_index]] * len(i)
+        # zipped.append(zip(dataframe[i].tolist(), color_list))
+        z = zip(data, color_list)
+        for o in z:
+            zipped.append(o)
+        color_index += 1
+
+    # Then make a sorted list of the indexes and unsorted list
+    # Zipped is unsorted list
+    sorted_zip = sorted(zipped, key=lambda x: x[0])
+
+    # Then iterate over both, combining the color index with their respective string
+    unsorted_colored = []
+    # Remove zeros
+    zipped = [x for x in zipped if x[0] != 0]
+    for i in zipped:
+        unsorted_colored.append(i[1] + str(i[0]) + Fore.RESET)
+
+    # Remove zeros
+    sorted_zip = [x for x in sorted_zip if x[0] != 0]
+    sorted_colored = []
+    for i in sorted_zip:
+        sorted_colored.append(i[1] + str(i[0]) + Fore.RESET)
+
+    return unsorted_colored, sorted_colored
+
 
 
 def SortList(array):

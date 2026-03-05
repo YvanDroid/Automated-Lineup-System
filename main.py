@@ -303,6 +303,7 @@ def sort_menu():
     extra_list = ""
     selected_column = 0  # Default for if the user has not selected a column yet
     sm_filename = GetFile()
+    extra_count = 0
     sm_rc_menu = [
         "&Right",
         ["Add Column to Sort", "Sort Columns", "Clear Sorting List"],
@@ -406,14 +407,16 @@ def sort_menu():
                 f"Unsorted List: \n {sm_list}"
             )
 
-            sm_df = tr.AddColumn(sm_df, extra_list, extra_list)
-
+            sm_df = tr.AddColumn(sm_df, f'extra_{extra_count}', extra_list)
+            sm_headers.append(f'extra_{extra_count}')
+            sort_window["-SELCOL-"].update(f"Selected Columns: {set(sm_headers)}")
+            extra_count += 1
             # multiline_update(sort_window, "-UNSORLIS-", )
 
         if event2 == "Sort Columns":
             sort_window["-SORLIS-"].update(f"Sorted List:{tr.SortList(sm_list)}")
-            sorting_array, sorted_array, selection_array = tr.SortColumns(
-                sm_df, sm_headers, extra_list
+            sorting_array, selection_array = tr.SortColumns(
+                sm_df, sm_headers
             )
             s_string, u_string = tr.array_to_string(sorting_array, selection_array)
             s_list, u_list = cut_ansi_string_into_parts(
@@ -447,8 +450,8 @@ def main_window(dataframe):
         [sg.Button("Edit", expand_x=True)],
         [sg.Button("Sort", expand_x=True)],
     ]
-    mm_pre_sort_list, mm_sorted_list, mm_selections = tr.SortColumns(
-        mm_df, mm_table_headers[-2:], ""
+    mm_pre_sort_list, mm_selections = tr.SortColumns(
+        mm_df, mm_table_headers[-2:]
     )
     fs_string, fu_string = tr.array_to_string(mm_pre_sort_list, mm_selections)
     fs_list, fu_list = cut_ansi_string_into_parts(
