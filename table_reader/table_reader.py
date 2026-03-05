@@ -194,16 +194,19 @@ def ReplaceColumn(dataframe, selection, data="", new_header=""):
     # If new_header is empty, just replace the data, keep the column name.
     content_list = list(map(int, (data.split(","))))
     max_len = max(len(dataframe), len(content_list))
+    print(selection, type(selection))
+    print(new_header, type(new_header))
     if max_len > len(dataframe):
         df  = df.reindex(range(max_len))
-    if new_header == "":
+    if new_header == selection:
         print("New header is old header")
         new_header = selection
     new_data = content_list
     # print(new_data)
     dataframe[selection] = pd.Series(new_data)
     # dataframe2 = dataframe.assign(new_header=new_data[new_header])
-    # dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
+    dataframe = dataframe.rename({selection: new_header}, axis="columns", inplace=True)
+    print(dataframe)
     try:
         dataframe = dataframe.replace(np.nan, 0)
     except: # When no nan values are present
@@ -272,7 +275,7 @@ def ColorArray(sorting_array, selection_array):
     for i in sorting_array: # Each i should be a list
         # dataframe_data = dataframe[i].tolist()
         data = i
-        color_list = [fore_color[color_index]] * len(i)
+        color_list = [fore_color[color_index%len(fore_color)]] * len(i)
         # zipped.append(zip(dataframe[i].tolist(), color_list))
         z = zip(data, color_list)
         for o in z:

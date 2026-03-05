@@ -292,7 +292,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
                 ce_dF,
                 str(ce_headers[selected_column]),
                 values3["-CELIST-"],
-                #values3["-CEHEAD-"], // replace just the column name. Don't take the column value
+                values3['-CEHEAD-'],  #replace just the column name. Don't take the column value
             )
             TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
