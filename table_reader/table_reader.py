@@ -119,6 +119,9 @@ def FileFromDate(date):  # Must be a datetime value
 
 
 def CreateFile(dataframe, file_name="newfile"):
+    if file_name == None or file_name == (): # Unsure if windows returns an empty tuple for cancelling
+        print("User cancelled")
+        return
     file_extension = file_name[-4:]
     if file_extension == ".csv":
         pass

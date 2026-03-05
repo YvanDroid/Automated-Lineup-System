@@ -195,14 +195,15 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
     ce_title = "Table Editor"
     if mode == 1:  # No name given
         ce_filename = GetFile()
-        print(ce_filename)
-        if ce_filename == (): # When cancelling out of dialogue menu, it returns an empty tuple.
+        print(f'File_path = {ce_filename}')
+        if ce_filename == () or ce_filename == None: # When cancelling out of dialogue menu, it returns an empty tuple or None on Linux for some reason.
             sg.popup("No file selected. Returning to menu")
             return
         ce_table, ce_dF, ce_headers = TableReader(ce_filename, ce_rc_menu)
     if mode == 0:
         ce_dF = dataframe
         ce_table, ce_headers = CreateTable(ce_dF, ce_rc_menu)
+        ce_filename = ""
 
     ce_form = [
         [sg.Text("Header")],
@@ -252,20 +253,23 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             ce_dF = tr.AddColumn(
                 ce_dF, header=values3["-CEHEAD-"], content=values3["-CELIST-"]
             )
-            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=mode)
 
         if event3 == "Delete Column" or event3 == "Delete Selected Column":
             print(ce_headers[selected_column])
             ce_dF = tr.RemoveColumn(ce_dF, str(ce_headers[selected_column]))
-            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=mode)
 
         if event3 == "Save to File":
+            file_text = "Lineup-"
+            if mode == 1:
+                file_text = ce_filename
             tr.CreateFile(
                 ce_dF,
                 file_name=sg.popup_get_text(
                     "Please enter the name to save",
                     title="Save file name",
-                    default_text="Lineup-",
+                    default_text=file_text,
                 ),
             )
         if event3 == "Select Column to Replace":
@@ -294,7 +298,7 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
                 values3["-CELIST-"],
                 values3['-CEHEAD-'],  #replace just the column name. Don't take the column value
             )
-            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=mode)
 
     ce_window.close()
 
@@ -309,7 +313,7 @@ def sort_menu():
         ["Add Column to Sort", "Sort Columns", "Clear Sorting List"],
     ]
     print(sm_filename)
-    if sm_filename == (): # When cancelling out of dialogue menu, it returns an empty tuple.
+    if sm_filename == () or sm_filename == None: # When cancelling out of dialogue menu, it returns an empty tuple or None on Linux for some reason.
         sg.popup("No file selected. Returning to menu")
         return
     sm_table, sm_df, sm_df_headers = TableReader(sm_filename, sm_rc_menu)
