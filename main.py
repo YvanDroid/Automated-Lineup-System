@@ -262,6 +262,8 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
 
         if event3 == "Save to File":
             file_text = "Lineup-"
+            if mode == 0 and missing_file: # Non-empty list returns true
+                file_text = missing_file[0]
             if mode == 1:
                 file_text = ce_filename
             tr.CreateFile(
@@ -534,5 +536,6 @@ def main_window(dataframe):
     mm_window.close()
 
 
-mm_df = tr.MainMenuDataframe()
+mm_df, missing_file = tr.MainMenuDataframe()
+print(missing_file)
 main_window(mm_df)

@@ -67,6 +67,7 @@ def MainMenuDataframe():
     whole_df = pd.DataFrame()
     whole_df = pd.concat([whole_df, Month_Dataframe(prev_month)], axis=1)
     mm_df = pd.DataFrame()
+    missing_file = []
     for i, day in enumerate(days):
         print(day)
         if prev_month.month == day.month:
@@ -76,6 +77,7 @@ def MainMenuDataframe():
                 mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
             except KeyError:
                 print(f"Value in table not found: {i}")
+                missing_file.append(FileFromDate(day))
                 continue
             continue
         else:
@@ -87,8 +89,9 @@ def MainMenuDataframe():
                 mm_df = pd.concat([mm_df, whole_df[str(day)]], axis=1)
             except KeyError:
                 print(f"Value in table not found: {day}")
+                missing_file.append(FileFromDate(day))
                 continue
-    return mm_df
+    return mm_df, list(set(missing_file))
 
 
 def Month_Dataframe(date):
