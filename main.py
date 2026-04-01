@@ -12,6 +12,7 @@ dF = pd.DataFrame()
 
 sg.user_settings_filename('ALSSettings.json')
 
+filename = ""
 
 
 def cut_ansi_string_into_parts(string_with_ansi_codes):
@@ -188,22 +189,27 @@ def TableUpdate(dataframe, window, window_function, **args):
 
 
 def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
+    mode = mode
     ce_rc_menu = [
         "&Right",
         ["Delete Column", "Select Column to Replace", "Save to File"],
     ]
     ce_title = "Table Editor"
+    global filename
+    ce_filename = filename
+
     if mode == 1:  # No name given
-        ce_filename = GetFile()
-        print(f'File_path = {ce_filename}')
-        if ce_filename == () or ce_filename == None: # When cancelling out of dialogue menu, it returns an empty tuple or None on Linux for some reason.
-            sg.popup("No file selected. Returning to menu")
-            return
+        if dataframe.empty:
+            ce_filename = GetFile()
+            filename = ce_filename
+            print(f'File_path = {ce_filename}')
+            if ce_filename == () or ce_filename == None: # When cancelling out of dialogue menu, it returns an empty tuple or None on Linux for some reason.
+                sg.popup("No file selected. Returning to menu")
+                return
         ce_table, ce_dF, ce_headers = TableReader(ce_filename, ce_rc_menu)
     if mode == 0:
         ce_dF = dataframe
         ce_table, ce_headers = CreateTable(ce_dF, ce_rc_menu)
-        ce_filename = ""
 
     ce_form = [
         [sg.Text("Header")],
@@ -253,12 +259,12 @@ def create_edit_menu(dataframe, mode=0):  # Editing = 1, Creating = 0
             ce_dF = tr.AddColumn(
                 ce_dF, header=values3["-CEHEAD-"], content=values3["-CELIST-"]
             )
-            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=mode)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Delete Column" or event3 == "Delete Selected Column":
             print(ce_headers[selected_column])
             ce_dF = tr.RemoveColumn(ce_dF, str(ce_headers[selected_column]))
-            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=mode)
+            TableUpdate(ce_dF, ce_window, create_edit_menu, mode=0)
 
         if event3 == "Save to File":
             file_text = "Lineup-"
@@ -447,6 +453,7 @@ def main_window(dataframe):
     MLINE_KEY2 = "-ML2-" + sg.WRITE_ONLY_KEY
     # ----------- Create the 3 layouts this Window will display -----------
     mm_df = dataframe
+    print(mm_df)
     mm_df = mm_df.replace(np.nan, 0)
     mm_df = mm_df.astype(int, copy=True, errors="raise")
     mm_table, mm_table_headers = CreateTable(mm_df, [])
@@ -523,19 +530,18 @@ def main_window(dataframe):
         elif event == "Sort":
             sort_menu()
         elif event == "Edit":
-            create_edit_menu("", 1)
+            dF = pd.DataFrame()
+            create_edit_menu(dF, 1)
         elif event == "Create":
             dF = pd.DataFrame()
             create_edit_menu(dF, 0)
         elif event == "Refresh Table":
-            mm_df = (
-                tr.MainMenuDataframe()
-            )  # Hopefully, you do this during the same day as before lol
+            mm_df, missing_file = tr.MainMenuDataframe() # Hopefully, you do this during the same day as before lol
             TableUpdate(mm_df, mm_window, main_window)
 
     mm_window.close()
 
 
 mm_df, missing_file = tr.MainMenuDataframe()
-print(missing_file)
+print(mm_df)
 main_window(mm_df)
